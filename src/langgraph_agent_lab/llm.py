@@ -12,18 +12,38 @@ Usage in nodes:
 from __future__ import annotations
 
 import os
+from pathlib import Path
+
+
+def _load_dotenv() -> None:
+    """Load `.env` from the repository root into process environment."""
+    env_path = Path(__file__).resolve().parents[2] / ".env"
+    if not env_path.exists():
+        return
+
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
 
 
 def get_llm(model: str | None = None, temperature: float = 0.0):
     """Create an LLM client from environment configuration.
 
     Checks for API keys in this order:
-    1. GEMINI_API_KEY → ChatGoogleGenerativeAI
-    2. OPENAI_API_KEY → ChatOpenAI
-    3. ANTHROPIC_API_KEY → ChatAnthropic
+    1. GEMINI_API_KEY -> ChatGoogleGenerativeAI
+    2. OPENAI_API_KEY -> ChatOpenAI
+    3. ANTHROPIC_API_KEY -> ChatAnthropic
 
     Override model with the `model` parameter or LLM_MODEL env var.
     """
+    _load_dotenv()
+
     if os.getenv("GEMINI_API_KEY"):
         try:
             from langchain_google_genai import ChatGoogleGenerativeAI
